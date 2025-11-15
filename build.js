@@ -253,6 +253,9 @@ function generateHomePage(collections) {
 // Generate HTML for a collection page
 function generateCollectionPage(collection, allMetadata) {
   const cards = allMetadata.map(meta => {
+    // Check if it's a YouTube URL
+    const isYouTube = meta.url.includes('youtube.com') || meta.url.includes('youtu.be');
+    
     // Format URL for display (remove protocol and www)
     const displayUrl = meta.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
     
@@ -261,7 +264,7 @@ function generateCollectionPage(collection, allMetadata) {
       <div class="card-image" style="background-image: url('${meta.image}')"></div>
       <div class="card-content">
         <h3 class="card-title">${escapeHtml(meta.title)}</h3>
-        <p class="card-url">${escapeHtml(displayUrl)}</p>
+        ${!isYouTube ? `<p class="card-url">${escapeHtml(displayUrl)}</p>` : ''}
       </div>
     </a>
   `;
