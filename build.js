@@ -252,15 +252,20 @@ function generateHomePage(collections) {
 
 // Generate HTML for a collection page
 function generateCollectionPage(collection, allMetadata) {
-  const cards = allMetadata.map(meta => `
+  const cards = allMetadata.map(meta => {
+    // Format URL for display (remove protocol and www)
+    const displayUrl = meta.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+    
+    return `
     <a href="${meta.url}" target="_blank" rel="noopener noreferrer" class="card">
       <div class="card-image" style="background-image: url('${meta.image}')"></div>
       <div class="card-content">
         <h3 class="card-title">${escapeHtml(meta.title)}</h3>
-        ${meta.description ? `<p class="card-description">${escapeHtml(meta.description)}</p>` : ''}
+        <p class="card-url">${escapeHtml(displayUrl)}</p>
       </div>
     </a>
-  `).join('');
+  `;
+  }).join('');
   
   return `<!DOCTYPE html>
 <html lang="en">

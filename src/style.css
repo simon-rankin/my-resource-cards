@@ -143,6 +143,16 @@ header h1 {
   -webkit-box-orient: vertical;
 }
 
+.card-url {
+  font-size: 13px;
+  color: #888;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+}
+
 .card-description {
   font-size: 14px;
   color: #666;
