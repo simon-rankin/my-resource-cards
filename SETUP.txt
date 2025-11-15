@@ -1,0 +1,49 @@
+# SETUP INSTRUCTIONS
+
+Download these 4 files:
+1. package.json
+2. build.js  
+3. style.css
+4. links.md
+
+Then create this folder structure:
+
+```
+my-resource-cards/
+├── package.json
+├── build.js
+├── links.md
+└── src/
+    └── style.css
+```
+
+## Steps:
+
+1. Create a folder called `my-resource-cards`
+2. Put `package.json`, `build.js`, and `links.md` in the main folder
+3. Create a subfolder called `src`
+4. Put `style.css` inside the `src` folder
+
+5. Open terminal in `my-resource-cards` folder and run:
+   ```
+   npm install
+   npm run build
+   ```
+
+Done! Your site will be in the `dist` folder.
+
+## To deploy to GitHub:
+
+1. Create new repo on GitHub
+2. In your `my-resource-cards` folder:
+   ```
+   git init
+   git add .
+   git commit -m "Initial commit"
+   git remote add origin https://github.com/YOUR-USERNAME/YOUR-REPO.git
+   git push -u origin main
+   ```
+
+3. Enable GitHub Pages in repo settings (use gh-pages branch)
+
+That's it!
