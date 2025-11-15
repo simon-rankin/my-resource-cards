@@ -52,6 +52,77 @@ function slugify(text) {
     .trim();
 }
 
+// Check if description is generic/unhelpful
+function isGenericDescription(description, url) {
+  if (!description) return true;
+  
+  const genericPhrases = [
+    'enjoy the videos and music you love',
+    'share it all with friends',
+    'youtube',
+    'upload original content',
+    'share videos with friends, family, and the world',
+  ];
+  
+  const lowerDesc = description.toLowerCase();
+  
+  // Check if it contains generic YouTube text
+  if (url.includes('youtube.com') && genericPhrases.some(phrase => lowerDesc.includes(phrase))) {
+    return true;
+  }
+  
+  // Check if description is too short to be useful
+  if (description.length < 10) {
+    return true;
+  }
+  
+  return false;
+}
+
+// Find the first suitable image from page content
+function findFirstImage($, url) {
+  const images = $('img');
+  const urlObj = new URL(url);
+  
+  for (let i = 0; i < images.length; i++) {
+    const img = $(images[i]);
+    let src = img.attr('src') || img.attr('data-src');
+    
+    if (!src) continue;
+    
+    // Skip tiny images, icons, logos (likely not content images)
+    const width = parseInt(img.attr('width')) || 0;
+    const height = parseInt(img.attr('height')) || 0;
+    
+    if (width > 0 && height > 0 && (width < 100 || height < 100)) {
+      continue;
+    }
+    
+    // Skip common icon/logo patterns
+    if (src.includes('icon') || src.includes('logo') || src.includes('avatar')) {
+      continue;
+    }
+    
+    // Make URL absolute
+    if (src.startsWith('//')) {
+      src = 'https:' + src;
+    } else if (src.startsWith('/')) {
+      src = urlObj.origin + src;
+    } else if (!src.startsWith('http')) {
+      src = urlObj.origin + '/' + src;
+    }
+    
+    // Force HTTPS
+    if (src.startsWith('http://')) {
+      src = src.replace('http://', 'https://');
+    }
+    
+    return src;
+  }
+  
+  return null;
+}
+
 // Scrape metadata from a URL
 async function scrapeMetadata(url) {
   try {
@@ -86,11 +157,20 @@ async function scrapeMetadata(url) {
                 $('meta[name="twitter:image"]').attr('content') ||
                 '';
     
+    // If no OG image found, try to find the first suitable image from the page
+    if (!image) {
+      console.log('  No OG image found, searching page for images...');
+      image = findFirstImage($, url);
+      if (image) {
+        console.log(`  Found image: ${image.substring(0, 60)}...`);
+      }
+    }
+    
     // Make image URL absolute if it's relative
     if (image && !image.startsWith('http')) {
       const urlObj = new URL(url);
       if (image.startsWith('//')) {
-        image = urlObj.protocol + image;
+        image = 'https:' + image;
       } else if (image.startsWith('/')) {
         image = urlObj.origin + image;
       } else {
@@ -98,8 +178,25 @@ async function scrapeMetadata(url) {
       }
     }
     
+    // Force HTTPS for images
+    if (image && image.startsWith('http://')) {
+      image = image.replace('http://', 'https://');
+    }
+    
+    // If still no image, use generic placeholder
+    if (!image) {
+      const hostname = new URL(url).hostname.replace('www.', '');
+      image = `https://via.placeholder.com/400x200/f5f5f5/666666?text=${encodeURIComponent(hostname)}`;
+      console.log('  Using placeholder image');
+    }
+    
+    // Filter out generic descriptions
+    if (isGenericDescription(description, url)) {
+      description = '';
+    }
+    
     // Truncate description if too long
-    if (description.length > 200) {
+    if (description && description.length > 200) {
       description = description.substring(0, 200) + '...';
     }
     
@@ -113,11 +210,12 @@ async function scrapeMetadata(url) {
   } catch (error) {
     console.error(`Error scraping ${url}: ${error.message}`);
     // Return fallback data
+    const hostname = new URL(url).hostname.replace('www.', '');
     return {
       url,
-      title: new URL(url).hostname,
+      title: hostname,
       description: '',
-      image: '',
+      image: `https://via.placeholder.com/400x200/f5f5f5/666666?text=${encodeURIComponent(hostname)}`,
       success: false
     };
   }
@@ -156,7 +254,7 @@ function generateHomePage(collections) {
 function generateCollectionPage(collection, allMetadata) {
   const cards = allMetadata.map(meta => `
     <a href="${meta.url}" target="_blank" rel="noopener noreferrer" class="card">
-      ${meta.image ? `<div class="card-image" style="background-image: url('${meta.image}')"></div>` : '<div class="card-image card-no-image"></div>'}
+      <div class="card-image" style="background-image: url('${meta.image}')"></div>
       <div class="card-content">
         <h3 class="card-title">${escapeHtml(meta.title)}</h3>
         ${meta.description ? `<p class="card-description">${escapeHtml(meta.description)}</p>` : ''}
