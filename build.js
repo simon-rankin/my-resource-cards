@@ -237,13 +237,20 @@ function generateHomePage(collections) {
       <h1>Resource Collections</h1>
     </header>
     
-    <div class="collections-list">
-      ${collections.map(col => `
-        <a href="${col.slug}.html" class="collection-link">
-          <h2>${col.name}</h2>
-          <span class="link-count">${col.links.length} resources</span>
+    <div class="collections-grid">
+      ${collections.map(col => {
+        // Get the first item's thumbnail as the collection preview
+        const previewImage = col.metadata && col.metadata[0] ? col.metadata[0].image : '';
+        return `
+        <a href="${col.slug}.html" class="collection-card">
+          <div class="collection-image" style="background-image: url('${previewImage}')"></div>
+          <div class="collection-info">
+            <h2>${col.name}</h2>
+            <span class="link-count">${col.links.length} resources</span>
+          </div>
         </a>
-      `).join('')}
+      `;
+      }).join('')}
     </div>
   </div>
 </body>
