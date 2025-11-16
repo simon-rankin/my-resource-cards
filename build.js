@@ -253,8 +253,13 @@ function generateHomePage(collections) {
 // Generate HTML for a collection page
 function generateCollectionPage(collection, allMetadata) {
   const cards = allMetadata.map(meta => {
-    // Check if it's a YouTube URL
+    // Check if it's a YouTube or Instagram URL (no URL display for these)
     const isYouTube = meta.url.includes('youtube.com') || meta.url.includes('youtu.be');
+    const isInstagram = meta.url.includes('instagram.com');
+    const isVimeo = meta.url.includes('vimeo.com');
+    
+    // Hide URL for video/social media content
+    const hideUrl = isYouTube || isInstagram || isVimeo;
     
     // Format URL for display (remove protocol and www)
     const displayUrl = meta.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
@@ -264,7 +269,7 @@ function generateCollectionPage(collection, allMetadata) {
       <div class="card-image" style="background-image: url('${meta.image}')"></div>
       <div class="card-content">
         <h3 class="card-title">${escapeHtml(meta.title)}</h3>
-        ${!isYouTube ? `<p class="card-url">${escapeHtml(displayUrl)}</p>` : ''}
+        ${!hideUrl ? `<p class="card-url">${escapeHtml(displayUrl)}</p>` : ''}
       </div>
     </a>
   `;

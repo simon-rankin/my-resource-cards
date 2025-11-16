@@ -1,5 +1,10 @@
 
 
+# Animated Brands
+https://www.instagram.com/p/DQKFzK6iBnD
+https://www.instagram.com/p/DQOmLmsjVfC
+https://www.instagram.com/p/DPwV2h6CJZL
+
 # Alumni Websites
 https://designrows.com/
 https://underscorebells.com/
@@ -25,6 +30,7 @@ https://www.youtube.com/watch?v=XZ99Var9Bjo
 https://www.youtube.com/watch?v=OX8xd3hW3-c
 https://www.youtube.com/watch?v=ek6VHKE-12I
 https://www.youtube.com/watch?v=RK6y1zOxXNM
+https://www.youtube.com/watch?v=vlESTaT48qw&t=1s
 https://www.youtube.com/watch?v=kKD0slvXtT4
 https://www.youtube.com/watch?v=dBdcfRH-xhg
 https://www.youtube.com/watch?v=AEogbEcf6Uc
@@ -63,4 +69,3 @@ https://www.youtube.com/watch?v=9lJ5RloVCBM
 https://www.youtube.com/watch?v=F-Opniqsij4
 https://www.youtube.com/watch?v=ynWB-LkMH8Q
 https://www.youtube.com/watch?v=1UKTw6EuykU
-https://www.youtube.com/watch?v=BuI2rE95mtY
