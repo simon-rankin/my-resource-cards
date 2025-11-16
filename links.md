@@ -23,6 +23,9 @@ https://zoenovacekdesign.com/
 https://www.secondnaturestudio.au/
 https://www.claireharbeck.com/
 https://www.aikoishibashi.com/
+https://katlidesign.xyz/
+https://www.studioellajayne.com/
+https://carla-bert.com/
 
 # Explainer Videos
 https://www.youtube.com/watch?v=4RRk5JOUvwo
