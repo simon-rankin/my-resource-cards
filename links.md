@@ -6,9 +6,17 @@ https://www.instagram.com/p/DQOmLmsjVfC
 https://www.instagram.com/p/DPwV2h6CJZL
 
 # Alumni Websites
+https://megfevans.com/
+https://amethyst-grouse-smk7.squarespace.com/
+https://shayeamitydesign.com/
+https://lucasrivera.com.au/
+https://jenixia.com/
+https://megfevans.com/
 https://designrows.com/
 https://underscorebells.com/
 https://ollievt.com/
+https://kysie.xyz/
+https://beccagreenbergdesign.com/
 https://www.chromeback.com.au/
 https://claudialawranceclover.xyz/
 https://readymag.website/u4074438374/5893712/
@@ -64,8 +72,12 @@ http://laurens-agency.pixeltogether.com/
 https://www.gemmamahoney.com/
 https://valerieyoewono.myportfolio.com/
 https://isabellacurnuck.tilda.ws/portfolio
+https://itsdiep1612.figma.site/
 
 # Explainer Videos
+https://www.youtube.com/watch?v=zL9UcCQAyeM
+https://www.youtube.com/watch?v=hyeLMc_RgkY
+https://www.youtube.com/watch?v=WnOwyKDEoZo
 https://www.youtube.com/watch?v=4RRk5JOUvwo
 https://www.youtube.com/shorts/-dLfoEnQQYg
 https://www.youtube.com/watch?v=ELd7lwb4Kx0
