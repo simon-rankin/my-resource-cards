@@ -4,18 +4,35 @@
 https://www.instagram.com/p/DQKFzK6iBnD
 https://www.instagram.com/p/DQOmLmsjVfC
 https://www.instagram.com/p/DPwV2h6CJZL
+https://www.instagram.com/p/DKO1wWMInuT
+https://www.instagram.com/p/DRTB_dzASFL
+https://www.instagram.com/p/DUBk2J1AXkJ
+https://www.instagram.com/p/DQquphqktsf
+https://www.instagram.com/p/DQnPJPUEhSO
+https://www.instagram.com/p/DPwds-GEcGW
+https://www.instagram.com/p/DOOt_e2EV-y
+https://www.instagram.com/p/DJR4BOVPQL9
+https://www.instagram.com/p/DK2DoViCFRW
+https://www.instagram.com/p/DNwFyndUDO-
+https://www.instagram.com/p/DOa-zpWgtbX
+https://www.instagram.com/p/CwksIrarazQ
+https://www.instagram.com/p/DCWqnRtIljL
+https://www.instagram.com/p/DNyp2okwGFm
+https://www.instagram.com/p/DNkbNPUsaQt
+https://www.instagram.com/p/DNX84cWqRub
 
 # Alumni Websites
-https://megfevans.com/
+https://butterfingers.studio/
+https://graceyard.xyz/
 https://amethyst-grouse-smk7.squarespace.com/
 https://shayeamitydesign.com/
 https://lucasrivera.com.au/
 https://jenixia.com/
-https://megfevans.com/
 https://designrows.com/
 https://underscorebells.com/
 https://ollievt.com/
 https://kysie.xyz/
+https://www.daniellaraniti.com/
 https://beccagreenbergdesign.com/
 https://www.chromeback.com.au/
 https://claudialawranceclover.xyz/
@@ -23,7 +40,6 @@ https://readymag.website/u4074438374/5893712/
 https://elenahogan.com/
 https://juliakaddatz.com/
 https://tejaylawrence.design/
-https://ewonkie.xyz/
 https://maridepalette.com/
 https://everywaredesign.com/
 https://www.aleishaearp.com/

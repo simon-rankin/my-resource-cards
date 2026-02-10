@@ -123,14 +123,137 @@ function findFirstImage($, url) {
   return null;
 }
 
+// Download and save image locally
+async function downloadImage(imageUrl, filename) {
+  try {
+    const response = await fetch(imageUrl);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    
+    const buffer = await response.buffer();
+    
+    // Ensure images directory exists
+    const imagesDir = path.join('dist', 'images');
+    if (!fs.existsSync(imagesDir)) {
+      fs.mkdirSync(imagesDir, { recursive: true });
+    }
+    
+    const imagePath = path.join(imagesDir, filename);
+    fs.writeFileSync(imagePath, buffer);
+    console.log(`  ✓ Downloaded: ${filename}`);
+    return `images/${filename}`;
+  } catch (e) {
+    console.log(`  ✗ Failed to download image: ${e.message}`);
+    return null;
+  }
+}
+
+// Handle Instagram URLs specifically
+async function scrapeInstagramMetadata(url) {
+  try {
+    console.log(`  Scraping Instagram: ${url}`);
+    
+    // Extract post ID from URL
+    const postIdMatch = url.match(/\/p\/([A-Za-z0-9_-]+)/);
+    if (!postIdMatch) {
+      return null;
+    }
+    
+    const postId = postIdMatch[1];
+    
+    // Try multiple approaches to get Instagram thumbnail
+    
+    // Approach 1: Try to fetch the page and extract metadata
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none'
+        },
+        timeout: 10000
+      });
+      
+      if (response.ok) {
+        const html = await response.text();
+        const $ = cheerio.load(html);
+        
+        // Try to get title from og:title
+        let title = $('meta[property="og:title"]').attr('content') || '@instagram';
+        
+        // Try to get the image from og:image
+        let imageUrl = $('meta[property="og:image"]').attr('content') || '';
+        
+        // Clean up the title
+        title = title.replace(/\s+on Instagram:.*$/i, '').trim();
+        if (title.length > 60) {
+          title = title.substring(0, 57) + '...';
+        }
+        
+        console.log(`  Title: ${title}`);
+        
+        // If we found an image URL, try to download it locally
+        if (imageUrl) {
+          console.log(`  Found image URL, downloading...`);
+          const filename = `instagram_${postId}.jpg`;
+          const localPath = await downloadImage(imageUrl, filename);
+          
+          if (localPath) {
+            return {
+              image: localPath,
+              title: title
+            };
+          } else {
+            // Download failed but we have the URL, use it directly (may expire)
+            console.log(`  Using direct URL (may expire later)`);
+            return {
+              image: imageUrl,
+              title: title
+            };
+          }
+        }
+      }
+    } catch (e) {
+      console.log(`  Page fetch failed: ${e.message}`);
+    }
+    
+    // Fallback: use Instagram-branded placeholder
+    console.log(`  Using placeholder image`);
+    return {
+      image: `https://placehold.co/600x600/E4405F/ffffff?text=Instagram+Post&font=roboto`,
+      title: 'Instagram Post'
+    };
+  } catch (e) {
+    console.log(`  Instagram scraping failed: ${e.message}`);
+  }
+  
+  return null;
+}
+
 // Scrape metadata from a URL
 async function scrapeMetadata(url) {
   try {
     console.log(`Scraping: ${url}`);
     
+    // Special handling for Instagram URLs
+    if (url.includes('instagram.com')) {
+      const instagramData = await scrapeInstagramMetadata(url);
+      if (instagramData && instagramData.image) {
+        return {
+          url,
+          title: instagramData.title || '@instagram',
+          description: '',
+          image: instagramData.image,
+          success: true
+        };
+      }
+    }
+    
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       },
       timeout: 10000
     });
