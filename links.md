@@ -1,8 +1,13 @@
 
 
 # Animated Brands
-https://www.instagram.com/p/DQKFzK6iBnD
-https://www.instagram.com/p/DQOmLmsjVfC
+https://www.instagram.com/p/DQU5Q6WiLY2
+https://www.instagram.com/p/DUYfmu9jOwR
+https://www.instagram.com/p/DUGD09PjnZj
+https://www.instagram.com/p/DUWZxsrFM4h
+https://www.instagram.com/p/DUYB_U3DMNv
+https://www.instagram.com/p/DP_0XgwjE35
+https://www.instagram.com/p/DQMj4D3CA3R
 https://www.instagram.com/p/DPwV2h6CJZL
 https://www.instagram.com/p/DKO1wWMInuT
 https://www.instagram.com/p/DRTB_dzASFL
@@ -75,7 +80,6 @@ https://ngjerrine.wixsite.com/portfolio
 https://naomili.com/
 https://bridgetteferrier.com/
 https://www.stacygougoulis.com/
-https://bethshipperleedesign.com/
 https://whatnotand.co/
 https://relpham.space/
 https://www.abbeyclerke.com.au/
