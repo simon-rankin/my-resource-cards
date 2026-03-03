@@ -148,3 +148,11 @@ https://www.youtube.com/watch?v=9lJ5RloVCBM
 https://www.youtube.com/watch?v=F-Opniqsij4
 https://www.youtube.com/watch?v=ynWB-LkMH8Q
 https://www.youtube.com/watch?v=1UKTw6EuykU
+
+# Motion Style Guides
+https://www.behance.net/gallery/154560589/Petbarn
+https://www.behance.net/gallery/162686691/Spotify-Wrapped-2022
+https://www.behance.net/gallery/241284241/WHISPR-Podcast-Platform-Branding
+https://www.behance.net/gallery/224232633/Shory-Brand-Identity
+https://www.behance.net/gallery/242711127/Skyline-Motion-Brand-Guidelines-Template
+https://www.behance.net/gallery/179015455/Mind-Motion-Toolkit-Guidelines
