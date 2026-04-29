@@ -29,13 +29,15 @@ https://www.instagram.com/p/DNX84cWqRub
 # Alumni Websites
 https://butterfingers.studio/
 https://graceyard.xyz/
-https://amethyst-grouse-smk7.squarespace.com/
+https://carissagalea.myportfolio.com/work
+
 https://shayeamitydesign.com/
 https://lucasrivera.com.au/
 https://jenixia.com/
 https://designrows.com/
 https://underscorebells.com/
-https://ollievt.com/
+
+
 https://kysie.xyz/
 https://www.daniellaraniti.com/
 https://beccagreenbergdesign.com/
@@ -45,7 +47,7 @@ https://readymag.website/u4074438374/5893712/
 https://elenahogan.com/
 https://juliakaddatz.com/
 https://tejaylawrence.design/
-https://maridepalette.com/
+
 https://everywaredesign.com/
 https://www.aleishaearp.com/
 https://zoenovacekdesign.com/
@@ -80,6 +82,7 @@ https://ngjerrine.wixsite.com/portfolio
 https://naomili.com/
 https://bridgetteferrier.com/
 https://www.stacygougoulis.com/
+https://aungsignsanddesigns.com.au/
 https://whatnotand.co/
 https://relpham.space/
 https://www.abbeyclerke.com.au/
