@@ -27,17 +27,15 @@ https://www.instagram.com/p/DNkbNPUsaQt
 https://www.instagram.com/p/DNX84cWqRub
 
 # Alumni Websites
+https://ollievt.design/
 https://butterfingers.studio/
 https://graceyard.xyz/
 https://carissagalea.myportfolio.com/work
-
 https://shayeamitydesign.com/
 https://lucasrivera.com.au/
 https://jenixia.com/
 https://designrows.com/
 https://underscorebells.com/
-
-
 https://kysie.xyz/
 https://www.daniellaraniti.com/
 https://beccagreenbergdesign.com/
@@ -47,7 +45,6 @@ https://readymag.website/u4074438374/5893712/
 https://elenahogan.com/
 https://juliakaddatz.com/
 https://tejaylawrence.design/
-
 https://everywaredesign.com/
 https://www.aleishaearp.com/
 https://zoenovacekdesign.com/
@@ -98,6 +95,7 @@ https://isabellacurnuck.tilda.ws/portfolio
 https://itsdiep1612.figma.site/
 
 # Explainer Videos
+
 https://www.youtube.com/watch?v=zL9UcCQAyeM
 https://www.youtube.com/watch?v=hyeLMc_RgkY
 https://www.youtube.com/watch?v=WnOwyKDEoZo
