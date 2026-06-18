@@ -27,6 +27,8 @@ https://www.instagram.com/p/DNkbNPUsaQt
 https://www.instagram.com/p/DNX84cWqRub
 
 # Alumni Websites
+https://megangray.framer.website/
+https://baswara.framer.website/
 https://ollievt.design/
 https://butterfingers.studio/
 https://graceyard.xyz/
@@ -96,8 +98,14 @@ https://itsdiep1612.figma.site/
 
 # Explainer Videos
 
+https://www.youtube.com/watch?v=h-WN1xSreLM
+https://www.youtube.com/watch?v=-srjsXynJyw
+https://www.youtube.com/watch?v=8k_mcm5tCRo
+https://www.youtube.com/watch?v=mcb8gQJOdqM
+https://www.youtube.com/watch?v=A2Zf8ksyUHI
 https://www.youtube.com/watch?v=zL9UcCQAyeM
 https://www.youtube.com/watch?v=hyeLMc_RgkY
+https://www.youtube.com/watch?v=CiYyxwg-q44
 https://www.youtube.com/watch?v=WnOwyKDEoZo
 https://www.youtube.com/watch?v=4RRk5JOUvwo
 https://www.youtube.com/shorts/-dLfoEnQQYg
