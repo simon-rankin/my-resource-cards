@@ -2,6 +2,29 @@ const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch');
 const cheerio = require('cheerio');
+const { parseVideosFile } = require('./videos-manifest');
+
+const BROWSER_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+// Some sites (Behance) return 403 to a generic browser user agent but serve
+// full Open Graph tags to link-preview crawlers - which is exactly what this
+// script is. Used as a retry when the normal request is refused.
+const PREVIEW_USER_AGENT = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
+
+// Hosts whose images are worth pulling down at build time rather than
+// hotlinking - either they expire, or they block off-site embedding.
+const CACHE_IMAGES_FROM = ['behance.net'];
+
+// Inline SVG stand-in for links with no usable image. Self-contained, so it
+// can't rot the way the old via.placeholder.com URLs did.
+function placeholderImage(label) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200">
+    <rect width="400" height="200" fill="#f0f0f0"/>
+    <text x="200" y="105" font-family="Helvetica, Arial, sans-serif" font-size="16"
+          fill="#999" text-anchor="middle">${label.replace(/[<>&]/g, '')}</text>
+  </svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg.replace(/\s+/g, ' '))}`;
+}
 
 // Read and parse the links.md file
 function parseLinksFile(filePath) {
@@ -52,10 +75,23 @@ function slugify(text) {
     .trim();
 }
 
+// Site-builder boilerplate that says nothing about the actual site. Portfolio
+// hosts put these in the meta description when the owner hasn't set one.
+const BOILERPLATE_PHRASES = [
+  'built with readymag',
+  'made with framer',
+  'now included free with any creative cloud',
+  'a template for independent creators',
+  'you should absolutely hire this person',
+  'powered by squarespace',
+  'create a free website',
+  'website builder',
+];
+
 // Check if description is generic/unhelpful
 function isGenericDescription(description, url) {
   if (!description) return true;
-  
+
   const genericPhrases = [
     'enjoy the videos and music you love',
     'share it all with friends',
@@ -63,14 +99,24 @@ function isGenericDescription(description, url) {
     'upload original content',
     'share videos with friends, family, and the world',
   ];
-  
+
   const lowerDesc = description.toLowerCase();
-  
+
   // Check if it contains generic YouTube text
   if (url.includes('youtube.com') && genericPhrases.some(phrase => lowerDesc.includes(phrase))) {
     return true;
   }
-  
+
+  // Platform boilerplate, whatever the host
+  if (BOILERPLATE_PHRASES.some(phrase => lowerDesc.includes(phrase))) {
+    return true;
+  }
+
+  // A bare domain name (e.g. "cargo.site") is a label, not a description
+  if (/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(description.trim())) {
+    return true;
+  }
+
   // Check if description is too short to be useful
   if (description.length < 10) {
     return true;
@@ -123,14 +169,25 @@ function findFirstImage($, url) {
   return null;
 }
 
+// Behance's og:image points at the full-size render - a 1400px asset that can
+// run to 22MB for an animated GIF. The "disp" variant is the same image at
+// 600px, which is still ~1.6x the size a card renders at. Not every asset path
+// has one, so callers fall back to the original.
+function smallerBehanceVariant(imageUrl) {
+  if (!imageUrl.includes('behance.net')) return null;
+  const smaller = imageUrl.replace(/\/(project_modules|projects)\/[^/]+\//, '/$1/disp/');
+  return smaller === imageUrl ? null : smaller;
+}
+
 // Download and save image locally
 async function downloadImage(imageUrl, filename) {
   try {
     const response = await fetch(imageUrl);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    
+
     const buffer = await response.buffer();
-    
+    if (buffer.length === 0) throw new Error('empty response');
+
     // Ensure images directory exists
     const imagesDir = path.join('dist', 'images');
     if (!fs.existsSync(imagesDir)) {
@@ -251,17 +308,24 @@ async function scrapeMetadata(url) {
       }
     }
     
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      },
+    let response = await fetch(url, {
+      headers: { 'User-Agent': BROWSER_USER_AGENT },
       timeout: 10000
     });
-    
+
+    // Retry refused requests as a link-preview crawler before giving up.
+    if (response.status === 403 || response.status === 401) {
+      console.log(`  HTTP ${response.status}, retrying as link preview crawler...`);
+      response = await fetch(url, {
+        headers: { 'User-Agent': PREVIEW_USER_AGENT },
+        timeout: 10000
+      });
+    }
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
-    
+
     const html = await response.text();
     const $ = cheerio.load(html);
     
@@ -271,11 +335,23 @@ async function scrapeMetadata(url) {
                 $('title').text() ||
                 new URL(url).hostname;
     
-    let description = $('meta[property="og:description"]').attr('content') ||
-                     $('meta[name="twitter:description"]').attr('content') ||
-                     $('meta[name="description"]').attr('content') ||
-                     '';
-    
+    // Take the first candidate that's actually useful. Some sites (Behance)
+    // set twitter:description to a copy of the title, so a plain || chain
+    // stops on a useless value instead of falling through to a real one.
+    const descriptionCandidates = [
+      $('meta[property="og:description"]').attr('content'),
+      $('meta[name="twitter:description"]').attr('content'),
+      $('meta[name="description"]').attr('content'),
+    ];
+
+    let description = descriptionCandidates.find(candidate => {
+      if (!candidate) return false;
+      const text = candidate.trim();
+      if (isGenericDescription(text, url)) return false;
+      // A description that just repeats the title adds nothing to the card.
+      return text.toLowerCase() !== title.trim().toLowerCase();
+    }) || '';
+
     let image = $('meta[property="og:image"]').attr('content') ||
                 $('meta[name="twitter:image"]').attr('content') ||
                 '';
@@ -306,18 +382,26 @@ async function scrapeMetadata(url) {
       image = image.replace('http://', 'https://');
     }
     
+    // Pull down images from hosts that don't survive hotlinking
+    if (image && CACHE_IMAGES_FROM.some(host => new URL(url).hostname.endsWith(host))) {
+      const ext = (image.split('?')[0].match(/\.(jpe?g|png|webp|gif)$/i) || ['.jpg'])[0];
+      const filename = `${slugify(new URL(url).hostname.replace('www.', ''))}_${slugify(path.basename(new URL(url).pathname))}${ext}`;
+
+      // Prefer the smaller render, but fall back if this asset has no variant.
+      const smaller = smallerBehanceVariant(image);
+      const localPath = (smaller && await downloadImage(smaller, filename))
+        || await downloadImage(image, filename);
+
+      if (localPath) image = localPath;
+    }
+
     // If still no image, use generic placeholder
     if (!image) {
       const hostname = new URL(url).hostname.replace('www.', '');
-      image = `https://via.placeholder.com/400x200/f5f5f5/666666?text=${encodeURIComponent(hostname)}`;
+      image = placeholderImage(hostname);
       console.log('  Using placeholder image');
     }
-    
-    // Filter out generic descriptions
-    if (isGenericDescription(description, url)) {
-      description = '';
-    }
-    
+
     // Truncate description if too long
     if (description && description.length > 200) {
       description = description.substring(0, 200) + '...';
@@ -338,10 +422,82 @@ async function scrapeMetadata(url) {
       url,
       title: hostname,
       description: '',
-      image: `https://via.placeholder.com/400x200/f5f5f5/666666?text=${encodeURIComponent(hostname)}`,
+      image: placeholderImage(hostname),
       success: false
     };
   }
+}
+
+// Poster frame that sits alongside each encoded clip (written by encode-videos.js)
+function posterPath(file) {
+  return `videos/posters/${file.replace(/\.mp4$/, '.jpg')}`;
+}
+
+// Generate HTML for a video gallery page
+function generateVideoPage(collection) {
+  const items = collection.videos.map(video => `
+    <figure class="video-item">
+      <video
+        class="video-player"
+        src="videos/${video.file}"
+        poster="${posterPath(video.file)}"
+        autoplay
+        loop
+        muted
+        playsinline
+        preload="metadata"
+      ></video>
+      <figcaption class="video-caption">
+        <a href="${video.url}" target="_blank" rel="noopener noreferrer">
+          <span class="video-title">${escapeHtml(video.title)}</span>
+          ${video.artist ? `<span class="video-artist">${escapeHtml(video.artist)}</span>` : ''}
+        </a>
+      </figcaption>
+    </figure>
+  `).join('');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${collection.name}</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a href="index.html" class="back-link">← Back to Collections</a>
+      <h1>${collection.name}</h1>
+    </header>
+
+    <div class="video-grid">
+      ${items}
+    </div>
+  </div>
+  <script>
+    // The autoplay attribute does the actual work, so playback still happens if
+    // this never runs. This only pauses what's scrolled out of view - a dozen
+    // simultaneous loops is a lot of decoding, and mobile Safari caps how many
+    // it will run at once anyway.
+    const players = document.querySelectorAll('.video-player');
+
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(entries => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.play().catch(() => {});
+          } else {
+            entry.target.pause();
+          }
+        }
+      }, { rootMargin: '200px 0px' });
+
+      players.forEach(player => observer.observe(player));
+    }
+  </script>
+</body>
+</html>`;
 }
 
 // Generate HTML for home page
@@ -362,14 +518,21 @@ function generateHomePage(collections) {
     
     <div class="collections-grid">
       ${collections.map(col => {
-        // Get the first item's thumbnail as the collection preview
-        const previewImage = col.metadata && col.metadata[0] ? col.metadata[0].image : '';
+        // Video collections preview with the first clip's poster frame;
+        // link collections use the first scraped thumbnail.
+        const previewImage = col.type === 'video'
+          ? (col.videos[0] ? posterPath(col.videos[0].file) : '')
+          : (col.metadata && col.metadata[0] ? col.metadata[0].image : '');
+        const count = col.type === 'video' ? col.videos.length : col.links.length;
+        // Video posters are portrait, so bias the crop upward onto the artwork
+        // instead of the album title baked into the middle of the frame.
+        const imageClass = col.type === 'video' ? 'collection-image collection-image-video' : 'collection-image';
         return `
         <a href="${col.slug}.html" class="collection-card">
-          <div class="collection-image" style="background-image: url('${previewImage}')"></div>
+          <div class="${imageClass}" style="background-image: url('${previewImage}')"></div>
           <div class="collection-info">
             <h2>${col.name}</h2>
-            <span class="link-count">${col.links.length} resources</span>
+            <span class="link-count">${count} resources</span>
           </div>
         </a>
       `;
@@ -399,6 +562,7 @@ function generateCollectionPage(collection, allMetadata) {
       <div class="card-image" style="background-image: url('${meta.image}')"></div>
       <div class="card-content">
         <h3 class="card-title">${escapeHtml(meta.title)}</h3>
+        ${meta.description ? `<p class="card-description">${escapeHtml(meta.description)}</p>` : ''}
         ${!hideUrl ? `<p class="card-url">${escapeHtml(displayUrl)}</p>` : ''}
       </div>
     </a>
@@ -442,14 +606,21 @@ function escapeHtml(text) {
 
 // Main build function
 async function build() {
-  console.log('Starting build...\n');
-  
+  // Scraping every link takes several minutes. --videos-only skips it and
+  // rebuilds just the galleries and CSS, leaving the link pages as they are.
+  const videosOnly = process.argv.includes('--videos-only');
+
+  console.log(`Starting build${videosOnly ? ' (videos only)' : ''}...\n`);
+
   // Parse links file
-  const collections = parseLinksFile('links.md');
-  console.log(`Found ${collections.length} collections\n`);
-  
+  const linkCollections = parseLinksFile('links.md');
+  // Video collections come from local files, so there's nothing to scrape.
+  const videoCollections = parseVideosFile('videos.md');
+  const collections = [...linkCollections, ...videoCollections];
+  console.log(`Found ${linkCollections.length} link collections, ${videoCollections.length} video collections\n`);
+
   // Scrape metadata for all links
-  for (const collection of collections) {
+  for (const collection of videosOnly ? [] : linkCollections) {
     console.log(`Processing collection: ${collection.name}`);
     const metadata = [];
     
@@ -469,15 +640,29 @@ async function build() {
     fs.mkdirSync('dist', { recursive: true });
   }
   
-  // Generate home page
-  const homePage = generateHomePage(collections);
-  fs.writeFileSync('dist/index.html', homePage);
-  console.log('Generated: index.html');
-  
-  // Generate collection pages
-  for (const collection of collections) {
-    const collectionPage = generateCollectionPage(collection, collection.metadata);
-    fs.writeFileSync(`dist/${collection.slug}.html`, collectionPage);
+  // Without scraped metadata the link cards would come out blank, so in
+  // videos-only mode leave the home page and link pages untouched.
+  if (videosOnly) {
+    console.log('Skipped: index.html and link collection pages (run a full build to refresh them)');
+  } else {
+    const homePage = generateHomePage(collections);
+    fs.writeFileSync('dist/index.html', homePage);
+    console.log('Generated: index.html');
+
+    for (const collection of linkCollections) {
+      const collectionPage = generateCollectionPage(collection, collection.metadata);
+      fs.writeFileSync(`dist/${collection.slug}.html`, collectionPage);
+      console.log(`Generated: ${collection.slug}.html`);
+    }
+  }
+
+  // Generate video gallery pages
+  for (const collection of videoCollections) {
+    const missing = collection.videos.filter(v => !fs.existsSync(path.join('dist', 'videos', v.file)));
+    if (missing.length) {
+      console.log(`  ! ${missing.length} clip(s) not found in dist/videos - run: npm run encode`);
+    }
+    fs.writeFileSync(`dist/${collection.slug}.html`, generateVideoPage(collection));
     console.log(`Generated: ${collection.slug}.html`);
   }
   

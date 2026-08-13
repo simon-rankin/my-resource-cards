@@ -2,7 +2,8 @@
   "name": "resource-cards",
   "version": "1.0.0",
   "scripts": {
-    "build": "node build.js"
+    "build": "node build.js",
+    "encode": "node encode-videos.js"
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",

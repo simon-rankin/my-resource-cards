@@ -1,2 +1,6 @@
 node_modules/
 .DS_Store
+
+# Raw screen recordings (~400MB). Only the encoded versions in dist/videos/
+# are committed - regenerate them with: npm run encode
+apple-music-samples-cut/

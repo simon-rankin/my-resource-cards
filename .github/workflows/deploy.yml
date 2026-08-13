@@ -5,7 +5,9 @@ on:
     branches: [ main ]
     paths:
       - 'links.md'
+      - 'videos.md'
       - 'build.js'
+      - 'videos-manifest.js'
       - 'src/**'
       - '.github/workflows/deploy.yml'
       - 'dist/**'
