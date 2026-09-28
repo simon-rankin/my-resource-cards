@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch');
+const puppeteer = require('puppeteer-core');
 const cheerio = require('cheerio');
 const { parseVideosFile } = require('./videos-manifest');
 
@@ -14,6 +15,15 @@ const PREVIEW_USER_AGENT = 'facebookexternalhit/1.1 (+http://www.facebook.com/ex
 // Hosts whose images are worth pulling down at build time rather than
 // hotlinking - either they expire, or they block off-site embedding.
 const CACHE_IMAGES_FROM = ['behance.net'];
+
+// Platforms where a missing preview means the post is gone or the host is
+// blocking us - a screenshot would only capture an error or login page.
+const NO_SCREENSHOT_HOSTS = ['youtube.com', 'youtu.be', 'vimeo.com', 'instagram.com', 'behance.net'];
+
+// Headless Chrome, used to screenshot sites that have no usable preview image.
+// Override with CHROME_PATH; if it isn't there, those links get a placeholder.
+const CHROME_PATH = process.env.CHROME_PATH ||
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
 // Inline SVG stand-in for links with no usable image. Self-contained, so it
 // can't rot the way the old via.placeholder.com URLs did.
@@ -204,6 +214,99 @@ async function downloadImage(imageUrl, filename) {
   }
 }
 
+// A site's og:image is whatever the owner (or their builder) put there, and
+// nothing checks it still exists: expired LinkedIn links, deleted files, even
+// the literal string "[object Object]". Confirm it actually serves an image.
+async function isWorkingImage(imageUrl) {
+  // Some CDNs (Cargo) refuse a browser user agent that doesn't come from a
+  // real browser, yet serve node-fetch's own - so either one passing will do.
+  return await imageLoads(imageUrl, BROWSER_USER_AGENT) || await imageLoads(imageUrl);
+}
+
+async function imageLoads(imageUrl, userAgent) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    new URL(imageUrl);
+    const response = await fetch(imageUrl, {
+      headers: userAgent ? { 'User-Agent': userAgent } : {},
+      signal: controller.signal
+    });
+    const type = response.headers.get('content-type') || '';
+    return response.ok && type.startsWith('image/');
+  } catch (e) {
+    return false;
+  } finally {
+    // Only the headers matter; abort rather than pull down a multi-megabyte
+    // original. (Destroying the body alone leaves the socket open.)
+    clearTimeout(timer);
+    controller.abort();
+  }
+}
+
+function screenshotFilename(url) {
+  // Keep the query string: every YouTube link is /watch, differing only in ?v=
+  const { hostname, pathname, search } = new URL(url);
+  const slug = slugify(`${hostname.replace('www.', '')} ${pathname} ${search}`.replace(/[./?=&]/g, ' ')).replace(/-+$/, '');
+  return `screenshot_${slug}.jpg`;
+}
+
+// One Chrome instance shared by every screenshot; closed at the end of build().
+let browserPromise = null;
+function getBrowser() {
+  if (!browserPromise) {
+    browserPromise = puppeteer.launch({ executablePath: CHROME_PATH, headless: true });
+  }
+  return browserPromise;
+}
+
+async function closeBrowser() {
+  if (browserPromise) await (await browserPromise).close();
+}
+
+// Screenshot the top of the page in headless Chrome. For a portfolio site
+// this beats both a placeholder and guessing at the first <img> on the page.
+async function screenshotSite(url, filename) {
+  if (!fs.existsSync(CHROME_PATH)) return null;
+
+  const imagesDir = path.join('dist', 'images');
+  fs.mkdirSync(imagesDir, { recursive: true });
+  const imagePath = path.join(imagesDir, filename);
+
+  let page;
+  try {
+    page = await (await getBrowser()).newPage();
+    await page.setViewport({ width: 1280, height: 800 });
+    await page.setUserAgent(BROWSER_USER_AGENT);
+
+    // Some sites never finish loading (endless video, polling), so don't
+    // insist on it: shoot whatever has rendered once the time is up.
+    try {
+      await page.goto(url, { waitUntil: 'load', timeout: 20000 });
+    } catch (e) {
+      if (!/timeout/i.test(e.message)) throw e;
+    }
+    // Let intro animations and lazy-loaded images settle
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    await page.screenshot({
+      path: imagePath,
+      type: 'jpeg',
+      quality: 75,
+      // Scale the 1280px viewport down to 800px, plenty for a card
+      clip: { x: 0, y: 0, width: 1280, height: 800, scale: 0.625 }
+    });
+    console.log(`  ✓ Screenshot: ${filename}`);
+    return `images/${filename}`;
+  } catch (e) {
+    console.log(`  ✗ Screenshot failed: ${e.message}`);
+    // A screenshot from a previous build is better than nothing
+    return fs.existsSync(imagePath) ? `images/${filename}` : null;
+  } finally {
+    if (page) await page.close().catch(() => {});
+  }
+}
+
 // Handle Instagram URLs specifically
 async function scrapeInstagramMetadata(url) {
   try {
@@ -355,16 +458,7 @@ async function scrapeMetadata(url) {
     let image = $('meta[property="og:image"]').attr('content') ||
                 $('meta[name="twitter:image"]').attr('content') ||
                 '';
-    
-    // If no OG image found, try to find the first suitable image from the page
-    if (!image) {
-      console.log('  No OG image found, searching page for images...');
-      image = findFirstImage($, url);
-      if (image) {
-        console.log(`  Found image: ${image.substring(0, 60)}...`);
-      }
-    }
-    
+
     // Make image URL absolute if it's relative
     if (image && !image.startsWith('http')) {
       const urlObj = new URL(url);
@@ -376,12 +470,33 @@ async function scrapeMetadata(url) {
         image = urlObj.origin + '/' + image;
       }
     }
-    
+
     // Force HTTPS for images
     if (image && image.startsWith('http://')) {
       image = image.replace('http://', 'https://');
     }
-    
+
+    if (image && !(await isWorkingImage(image))) {
+      console.log(`  OG image doesn't load: ${image.substring(0, 60)}...`);
+      image = '';
+    }
+
+    // No usable OG image: screenshot the site, or failing that, guess at the
+    // first suitable image on the page (often a nav icon or blurred preview).
+    const canScreenshot = !NO_SCREENSHOT_HOSTS.some(host => new URL(url).hostname.endsWith(host));
+    if (!image && canScreenshot) {
+      console.log('  No usable OG image, taking screenshot...');
+      image = await screenshotSite(url, screenshotFilename(url));
+    }
+    if (!image) {
+      console.log('  Searching page for images...');
+      const found = findFirstImage($, url);
+      if (found && await isWorkingImage(found)) {
+        image = found;
+        console.log(`  Found image: ${image.substring(0, 60)}...`);
+      }
+    }
+
     // Pull down images from hosts that don't survive hotlinking
     if (image && CACHE_IMAGES_FROM.some(host => new URL(url).hostname.endsWith(host))) {
       const ext = (image.split('?')[0].match(/\.(jpe?g|png|webp|gif)$/i) || ['.jpg'])[0];
@@ -416,7 +531,8 @@ async function scrapeMetadata(url) {
     };
   } catch (error) {
     console.error(`Error scraping ${url}: ${error.message}`);
-    // Return fallback data
+    // Return fallback data. No screenshot here: a site that refuses the
+    // scraper usually serves a bot check to headless Chrome too.
     const hostname = new URL(url).hostname.replace('www.', '');
     return {
       url,
@@ -634,7 +750,8 @@ async function build() {
     collection.metadata = metadata;
     console.log('');
   }
-  
+  await closeBrowser();
+
   // Ensure dist directory exists
   if (!fs.existsSync('dist')) {
     fs.mkdirSync('dist', { recursive: true });
