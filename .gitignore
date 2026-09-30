@@ -4,3 +4,7 @@ node_modules/
 # Raw screen recordings (~400MB). Only the encoded versions in dist/videos/
 # are committed - regenerate them with: npm run encode
 apple-music-samples-cut/
+
+# Student submissions: filenames contain names and student IDs. Never commit.
+# Only the anonymised, numbered encodes in dist/videos/ are published.
+apple-music-animated-albumcovers/

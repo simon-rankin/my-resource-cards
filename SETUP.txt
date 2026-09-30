@@ -61,3 +61,22 @@ To re-scrape (e.g. to pick up a site's new thumbnail):
 
 If a site can't be reached during a refresh, its card keeps the previous version.
 To re-scrape a single link, delete its entry from scrape-cache.json and build.
+
+## Student video galleries (Animated Album Covers)
+
+Defined in videos.md with two option lines and no video entries:
+
+   # Animated Album Covers
+   playback: click
+   source: apple-music-animated-albumcovers
+
+Drop the student .mp4s into that folder (filenames can include names and IDs -
+the folder is gitignored and never published), then:
+
+   npm run encode -- "Animated Album Covers"
+   npm run build
+
+Clips are published as animated-album-covers-01.mp4, -02, ... with names and
+embedded metadata stripped and sound kept. The numbering is a fixed shuffle,
+not alphabetical, so numbers can't be matched to a class list. Adding or
+removing files renumbers them.

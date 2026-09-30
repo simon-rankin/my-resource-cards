@@ -7,8 +7,28 @@
 //   filename.mp4
 //   Title — Artist
 //   https://link-to-open-when-clicked
+//
+// Option lines may follow the heading:
+//
+//   playback: click   - play on click (with sound) instead of autoplaying muted
+//   source: folder    - encode every .mp4 in this folder as anonymous numbered
+//                       clips (<slug>-01.mp4, ...), with no blocks needed. For
+//                       student work: source filenames carry names and IDs, so
+//                       the folder is gitignored and only the numbers publish.
 
 const fs = require('fs');
+const path = require('path');
+
+const OPTION_LINE = /^(playback|source):\s*(.+)$/i;
+
+// Numbered clips already encoded for a collection. build.js reads these rather
+// than the source folder, which isn't committed.
+function numberedOutputs(slug) {
+  const dir = path.join('dist', 'videos');
+  if (!fs.existsSync(dir)) return [];
+  const pattern = new RegExp(`^${slug}-\\d+\\.mp4$`);
+  return fs.readdirSync(dir).filter(file => pattern.test(file)).sort();
+}
 
 function slugify(text) {
   return text
@@ -65,7 +85,10 @@ function parseVideosFile(filePath) {
       if (currentCollection) collections.push(currentCollection);
 
       const name = trimmed.substring(2).trim();
-      currentCollection = { name, slug: slugify(name), type: 'video', videos: [] };
+      currentCollection = { name, slug: slugify(name), type: 'video', playback: 'autoplay', videos: [] };
+    } else if (currentCollection && block.length === 0 && OPTION_LINE.test(trimmed)) {
+      const [, key, value] = trimmed.match(OPTION_LINE);
+      currentCollection[key.toLowerCase()] = value.trim();
     } else if (trimmed === '') {
       flushBlock();
     } else {
@@ -75,6 +98,14 @@ function parseVideosFile(filePath) {
 
   flushBlock();
   if (currentCollection) collections.push(currentCollection);
+
+  for (const collection of collections) {
+    if (collection.source && collection.videos.length === 0) {
+      collection.numbered = true;
+      collection.videos = numberedOutputs(collection.slug)
+        .map(file => ({ file, title: '', artist: '', url: '' }));
+    }
+  }
 
   return collections;
 }

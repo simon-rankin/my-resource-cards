@@ -59,3 +59,7 @@ https://music.apple.com/au/album/the-nights/1875769085
 01-yard-act.mp4
 You're Gonna Need a Little Music — Yard Act
 https://music.apple.com/au/album/youre-gonna-need-a-little-music/1893300776
+
+# Animated Album Covers
+playback: click
+source: apple-music-animated-albumcovers

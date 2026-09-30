@@ -616,6 +616,90 @@ function generateVideoPage(collection) {
 </html>`;
 }
 
+const PLAY_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg>';
+const STOP_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="1"/></svg>';
+
+// Generate HTML for a click-to-play video gallery (playback: click). Clips sit
+// on their poster until played, then loop with sound until stopped. Only one
+// plays at a time.
+function generateClickToPlayPage(collection) {
+  const items = collection.videos.map((video, i) => {
+    const number = String(i + 1).padStart(2, '0');
+    return `
+    <figure class="video-item">
+      <div class="video-frame">
+        <video
+          class="video-player video-player-click"
+          src="videos/${video.file}"
+          poster="${posterPath(video.file)}"
+          loop
+          playsinline
+          preload="none"
+        ></video>
+        <button class="video-toggle" type="button" aria-label="Play ${number}">
+          <span class="icon-play">${PLAY_ICON}</span>
+          <span class="icon-stop">${STOP_ICON}</span>
+        </button>
+      </div>
+      <figcaption class="video-caption">
+        <span class="video-number">${number}</span>
+      </figcaption>
+    </figure>
+  `;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${collection.name}</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a href="index.html" class="back-link">← Back to Collections</a>
+      <h1>${collection.name}</h1>
+    </header>
+
+    <div class="video-grid video-grid-click">
+      ${items}
+    </div>
+  </div>
+  <script>
+    let current = null;
+
+    function stop(item) {
+      const video = item.querySelector('video');
+      video.pause();
+      // load() rewinds and puts the poster back up
+      video.load();
+      item.classList.remove('is-playing');
+      item.querySelector('.video-toggle').setAttribute('aria-label',
+        'Play ' + item.querySelector('.video-number').textContent);
+      if (current === item) current = null;
+    }
+
+    function play(item) {
+      if (current) stop(current);
+      current = item;
+      item.classList.add('is-playing');
+      item.querySelector('.video-toggle').setAttribute('aria-label',
+        'Stop ' + item.querySelector('.video-number').textContent);
+      item.querySelector('video').play().catch(() => stop(item));
+    }
+
+    document.querySelectorAll('.video-grid-click .video-item').forEach(item => {
+      const toggle = () => item.classList.contains('is-playing') ? stop(item) : play(item);
+      item.querySelector('.video-toggle').addEventListener('click', toggle);
+      item.querySelector('video').addEventListener('click', toggle);
+    });
+  </script>
+</body>
+</html>`;
+}
+
 // Generate HTML for home page
 function generateHomePage(collections) {
   return `<!DOCTYPE html>
@@ -844,7 +928,13 @@ async function build() {
     if (missing.length) {
       console.log(`  ! ${missing.length} clip(s) not found in dist/videos - run: npm run encode`);
     }
-    fs.writeFileSync(`dist/${collection.slug}.html`, generateVideoPage(collection));
+    if (collection.numbered && collection.videos.length === 0) {
+      console.log(`  ! No clips for ${collection.name} yet - run: npm run encode`);
+    }
+    const page = collection.playback === 'click'
+      ? generateClickToPlayPage(collection)
+      : generateVideoPage(collection);
+    fs.writeFileSync(`dist/${collection.slug}.html`, page);
     console.log(`Generated: ${collection.slug}.html`);
   }
   
