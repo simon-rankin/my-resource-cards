@@ -720,11 +720,53 @@ function escapeHtml(text) {
   return text.replace(/[&<>"']/g, m => map[m]);
 }
 
+// Scraped metadata, keyed by URL. Scraping every link takes around ten
+// minutes, so each one is scraped once and reused on later builds.
+const CACHE_FILE = 'scrape-cache.json';
+
+function loadCache() {
+  try {
+    return JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8'));
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveCache(cache) {
+  // Sorted keys keep the diff readable when links are added
+  const sorted = Object.fromEntries(Object.entries(cache).sort(([a], [b]) => a.localeCompare(b)));
+  fs.writeFileSync(CACHE_FILE, JSON.stringify(sorted, null, 2) + '\n');
+}
+
+// A cached entry is only reusable if the image it points at is still there.
+function isUsableCacheEntry(meta) {
+  if (!meta || meta.image.startsWith('data:')) return false;
+  if (meta.image.startsWith('images/')) return fs.existsSync(path.join('dist', meta.image));
+  return true;
+}
+
+// --refresh re-scrapes everything; --refresh "Alumni Websites" (or the page
+// slug, alumni-websites) re-scrapes just that section. Repeatable.
+function parseRefreshArgs(argv) {
+  const sections = [];
+  let all = false;
+  argv.forEach((arg, i) => {
+    if (arg !== '--refresh') return;
+    const next = argv[i + 1];
+    if (next && !next.startsWith('--')) sections.push(next.toLowerCase());
+    else all = true;
+  });
+  return collection => all ||
+    sections.includes(collection.name.toLowerCase()) || sections.includes(collection.slug);
+}
+
 // Main build function
 async function build() {
-  // Scraping every link takes several minutes. --videos-only skips it and
-  // rebuilds just the galleries and CSS, leaving the link pages as they are.
+  // --videos-only rebuilds just the galleries and CSS, leaving the link pages
+  // as they are.
   const videosOnly = process.argv.includes('--videos-only');
+  const shouldRefresh = parseRefreshArgs(process.argv);
+  const cache = loadCache();
 
   console.log(`Starting build${videosOnly ? ' (videos only)' : ''}...\n`);
 
@@ -735,18 +777,41 @@ async function build() {
   const collections = [...linkCollections, ...videoCollections];
   console.log(`Found ${linkCollections.length} link collections, ${videoCollections.length} video collections\n`);
 
-  // Scrape metadata for all links
+  // Scrape metadata for new links; reuse the cache for the rest
   for (const collection of videosOnly ? [] : linkCollections) {
-    console.log(`Processing collection: ${collection.name}`);
+    const refresh = shouldRefresh(collection);
+    console.log(`Processing collection: ${collection.name}${refresh ? ' (refreshing)' : ''}`);
     const metadata = [];
-    
+    let reused = 0;
+
     for (const url of collection.links) {
+      const cached = cache[url];
+      if (!refresh && isUsableCacheEntry(cached)) {
+        metadata.push({ url, ...cached, success: true });
+        reused++;
+        continue;
+      }
+
       const meta = await scrapeMetadata(url);
-      metadata.push(meta);
+      // Don't cache a placeholder: retry it next build in case the site's back
+      if (meta.success && !meta.image.startsWith('data:')) {
+        const { url: _, success, ...stored } = meta;
+        cache[url] = stored;
+        saveCache(cache);
+        metadata.push(meta);
+      } else if (isUsableCacheEntry(cached)) {
+        // Site down or rate limiting us: keep the card as it was
+        console.log('  Keeping previous version of this card');
+        metadata.push({ url, ...cached, success: true });
+      } else {
+        metadata.push(meta);
+      }
       // Small delay to be respectful to servers
       await new Promise(resolve => setTimeout(resolve, 500));
     }
-    
+
+    if (reused) console.log(`  ${reused} link(s) reused from ${CACHE_FILE}`);
+
     collection.metadata = metadata;
     console.log('');
   }

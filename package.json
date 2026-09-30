@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "build": "node build.js",
+    "refresh": "node build.js --refresh",
     "encode": "node encode-videos.js"
   },
   "dependencies": {

@@ -47,3 +47,17 @@ Done! Your site will be in the `dist` folder.
 3. Enable GitHub Pages in repo settings (use gh-pages branch)
 
 That's it!
+
+## Rebuilding after adding links
+
+`npm run build` only scrapes links it hasn't seen before. Everything else is
+reused from scrape-cache.json, so adding a link or a new section takes seconds.
+Commit scrape-cache.json along with dist/.
+
+To re-scrape (e.g. to pick up a site's new thumbnail):
+
+   npm run refresh                          # every link (~10 minutes)
+   npm run refresh -- "Alumni Websites"     # one section, by heading or page slug
+
+If a site can't be reached during a refresh, its card keeps the previous version.
+To re-scrape a single link, delete its entry from scrape-cache.json and build.
